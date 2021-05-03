@@ -1,0 +1,265 @@
+---
+title: "Multivariate Analysis"
+output:
+  pdf_document:
+    fig_width: 6
+    fig_height: 8
+  html_document:
+    df_print: paged
+---
+
+libraries used:
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(dplyr)
+library("ggpubr")
+library(factoextra)
+
+```
+
+
+
+```{r, include=FALSE}
+data<-read.csv("River_Thames_Water_Quality.csv", na.strings = TRUE)
+data = data[ , !(names(data) %in% "Sampling.time..hh.mm." )]
+head(data)
+#summary(data)
+```
+
+## Tidying Data
+
+Checking for any missing values 
+```{r,echo=FALSE}
+sum(is.na(data))
+sapply(data, function(data) sum(is.na(data)))
+#colSums(is.na(data))
+```
+
+
+Treating the missing values & looking at the Structure of the data.
+```{r, include=FALSE}
+data <- na.omit(data)#Remove all rows that contain NA values
+sum(is.na(data))
+sapply(data, function(data) sum(is.na(data)))
+summary(data)
+#sapply(data,class)
+data$Sampling_date <- as.Date(data$Sampling_date,"%d/%m/%y")
+str(data)
+
+```
+
+
+The different samples or groups in the data set
+```{r, echo=FALSE}
+unique(data["Site"])
+
+```
+
+
+Checking if this is balanced design
+```{r, warning=FALSE ,message=FALSE}
+design<-data %>% group_by(Site) %>% 
+  summarise(Count = n())
+design
+```
+Since all the groups have almost equal number of observations we can assume this to be a balanced design.
+
+
+
+## Analysis of Data
+
+
+### MANOVA TEST
+
+Null Hypothesis(Ho):There is no significant difference in mean vectors of  all dependent variables.
+Alternate Hypothesis(H1):At least one mean vector that is significantly different.
+
+
+
+```{r, echo=FALSE}
+dependentVar<-cbind(data$Water_temperature, data$pH, data$Alkalinity,       data$Suspended_solids,data$Phosphorus, data$Ammonium, data$Dissolved_silicon, data$Chlorophyll, data$Dissolved_fluoride, data$Dissolved_chloride, data$Dissolved_nitrate, data$Dissolved_sulphate, data$Dissolved_sodium, data$Dissolved_potassium, data$Dissolved_calcium, data$Dissolved_magnesium, data$Dissolved_boron)
+```
+```{r}
+manova1<-manova(dependentVar~data$Site)
+##re<-data.frame(capture.output(summary(manova1)))
+##knitr::kable(re, caption = "Manova output")
+summary(manova1)
+summary(manova1,test = "Wilk")
+summary(manova1,test = "Roy")
+summary(manova1,test = "Hotelling-Lawley")
+
+
+```
+All P values are less than 0.05 hence the null hypothesis is rejected that is, at least one mean value of a dependent variable in a river is significantly different from others.
+
+
+
+
+
+Individual means of all dependent variables with respect to its rivers
+```{r}
+df1 = group_by(data, Site) %>%
+  summarise_if(
+    is.numeric, mean
+  )
+
+df1 = df1 %>% column_to_rownames(., var = "Site")##Making the column site just an index
+df1
+```
+
+
+
+
+## Visualization
+
+
+```{r,include=FALSE,echo=FALSE, warning=FALSE}
+
+# group_by(data, Site) %>%
+#   summarise(
+#     count = n(),
+#     mean = mean(pH, na.rm = TRUE),
+#     sd = sd(pH, na.rm = TRUE)
+#   )
+
+order1 = c("River Thame at Wheatley","River Ray at Islip","River Cherwell at Hampton Poyle","River Evenlode at Cassington Mill","River Thames at Swinford","River Thames at Newbridge","River Windrush at Newbridge","River Leach at Mill Lane,Lechlade","River Cole at Lynt Bridge","River Coln at Whelford","River Ock at Abingdon","River Pang at Tidmarsh","River Thames at Sonning","River Lodden at Charvil","The Cut at Paley Street","River Thames at Runnymede","River Wye at Bourne End","River Thames at Wallingford","River Thames at Hannington Wick","River Kennet at Woolhampton","River Enborne at Brimpton","Jubilee River at Pocock's Bridge")
+
+
+# ggline(data, x = "Site", y = "pH", 
+#        add = c("mean_se", "jitter"),
+#        order = order1,
+#        ylab = "pH", xlab = "Treatment")+theme(axis.text.x = element_blank())
+
+
+
+```
+
+
+
+Let us Visualize how  the first six dependent values of each river with respect to their sites.
+
+```{r,echo=FALSE, warning=FALSE}
+
+ggboxplot(data, x = "Site", y = "Water_temperature", 
+          color = "Site",
+          order = order1,
+          ylab = "Water_temperature", xlab = "Site") + font("xlab",size = 9) + rotate_x_text() + theme(legend.position = "none") + coord_cartesian(ylim = c(0,30))
+
+
+ggboxplot(data, x = "Site", y = "pH", 
+          color = "Site",
+          order = order1,
+          ylab = "pH", xlab = "Site") + font("xlab",size = 9) + rotate_x_text() + theme(legend.position = "none") 
+
+ggboxplot(data, x = "Site", y = "Alkalinity", 
+          color = "Site",
+          order = order1,
+          ylab = "Alkalinity", xlab = "Site") + font("xlab",size = 9) + rotate_x_text() + theme(legend.position = "none") 
+
+
+ggboxplot(data, x = "Site", y = "Suspended_solids", 
+          color = "Site",
+          order = order1,
+          ylab = "Suspended_solids", xlab = "Site") + font("xlab",size = 9) + rotate_x_text() + theme(legend.position = "none") + coord_cartesian(ylim = c(0,200))
+
+ggboxplot(data, x = "Site", y = "Phosphorus", 
+          color = "Site",
+          order = order1,
+          ylab = "Phosphorus", xlab = "Sitet") + font("xlab",size = 9) + rotate_x_text() + theme(legend.position = "none") 
+
+ggboxplot(data, x = "Site", y = "Ammonium", 
+          color = "Site",
+          order = order1,
+          ylab = "Ammonium", xlab = "Site") + font("xlab",size = 9) + rotate_x_text() + theme(legend.position = "none") + coord_cartesian(ylim = c(0,0.75))
+
+```
+
+\newpage
+
+We can see some dependent variables like pH and alkalinity has some significantly different values which confirms the rejection of null hypothesis.
+
+
+
+
+
+
+
+
+Since the null hypothesis was rejected by the MANOVA test let us see the how the individual dependent variables behave by doing an ANOVA test for each response.  Here response 1 is the water_temperature and the respective responses are in order as in the data set such that the response 17 is dissolved boron.
+```{r}
+
+summary.aov(manova1)
+
+```
+
+
+
+## Cluster Analysis
+
+
+
+Finding the optimal number of clusters
+```{r}
+
+fviz_nbclust(df1, kmeans, method = "wss") +
+geom_vline(xintercept = 3, linetype = 2)
+
+```
+The optimal number of clusters is 3.
+
+
+
+```{r}
+Cdata <- subset(data, select = -c(1,2,3))#Only have quantitatve variables
+
+m <- apply(Cdata, 2, mean)
+
+str(Cdata)
+
+
+```
+
+
+
+Non Hierarchical Clustering
+```{r}
+set.seed(123)
+clusters = kmeans(df1,3)
+#clusters$centers  
+df2 = df1
+df2$Clusters <- as.factor(clusters$cluster)
+clusters$cluster
+df2
+```
+
+
+Interpreting the clusters
+```{r}
+dff = aggregate(df1, by=list(cluster=clusters$cluster), mean)#Means for each dependent variable in clusters
+dff
+##knitr::kable(dff,digits = 3)
+```
+By Clustering we have grouped the river sites according to similarity measures and we have obtained a summary of the clusters, from this we can see the differences in each cluster clearly. 
+
+
+
+
+```{r, echo=FALSE}
+#install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel", 
+#"ggspatial", "libwgeom", "sf", "rnaturalearth", "rnaturalearthdata"))
+
+
+```
+
+```{r}
+#sites<- c(unique(data["Site"]))
+
+#library(ggmap)
+#register_google(key = "...")
+#lonlat <- geocode(location = order1)
+```
+
+
+
+
+
